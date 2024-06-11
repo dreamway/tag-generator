@@ -12,7 +12,7 @@ import (
 
 	//canvas
 	"github.com/tdewolff/canvas"
-	"github.com/tdewolff/canvas/renderers/pdf"
+	"github.com/tdewolff/canvas/renderers"
 )
 
 var fontLatin *canvas.FontFamily
@@ -64,17 +64,6 @@ func drawTextAndMoveDown(c *canvas.Context, x float64, text *canvas.Text) {
 }
 
 func renderSFContainerTag(tag string, timestamp string, subWaybillCount int, containerNo string, width, height float64, Orientation int) {
-	f, err := os.Create(containerNo + ".pdf")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	//create a PDF renderer
-	pdf := pdf.New(f, width, height, nil)
-	defer pdf.Close()
-
-	//create a canvas context around the renderer
 	cvs := canvas.New(width, height)
 	ctx := canvas.NewContext(cvs)
 
@@ -92,13 +81,18 @@ func renderSFContainerTag(tag string, timestamp string, subWaybillCount int, con
 	drawTextAndMoveDown(ctx, 10.0, headerText)
 	fmt.Println("y update:", y)
 
-	timestamp_and_locate_info := fmt.Sprintf("%s 	(512WE %d 件)", timestamp, subWaybillCount)
-	drawTextAndMoveDown(ctx, 10.0, canvas.NewTextBox(text10Face, timestamp_and_locate_info, 0.0, 0.0, canvas.Left, canvas.Top, 0.0, 0.0))
+	timestamp_and_locate_info := fmt.Sprintf("%s 	(512WE %d ", timestamp, subWaybillCount)
+	timestamp_and_locate_info += "件" + ")"
+	fmt.Println(timestamp_and_locate_info)
+	rt := canvas.NewRichText(text10Face)
+	rt.WriteString(timestamp_and_locate_info)
+	timestampText := rt.ToText(100, 80, canvas.Left, canvas.Right, 0.0, 0.0)
+	drawTextAndMoveDown(ctx, 10.0, timestampText)
 	fmt.Println("y update:", y)
 
 	barcode := GenBarCode(containerNo, 200, 60)
 	y -= 60
-	ctx.DrawImage(10, y, barcode, canvas.DPMM(2.0))
+	ctx.DrawImage(10, y, barcode, canvas.DPMM(3.2))
 	y -= float64(barcode.Bounds().Size().Y + 5)
 	fmt.Println("y update:", y)
 
@@ -107,11 +101,13 @@ func renderSFContainerTag(tag string, timestamp string, subWaybillCount int, con
 
 	//qrcode
 	qrcode := GenQRCode(containerNo, 30, 30)
-	ctx.DrawImage(width-50.0, y, qrcode, canvas.DPMM(2.0))
+	ctx.DrawImage(width-50.0, y, qrcode, canvas.DPMM(3.2))
 
 	//draw the canvas on the PDF
-	cvs.RenderTo(pdf)
-	fmt.Println("todo: orientation")
+	//cvs.RenderTo(pdf)
+	//cvs.RenderTo(canvasWriter)
+	//cvs.WriteFile(containerNo+".pdf", renderers.PNG())
+	renderers.Write(containerNo+".pdf", cvs)
 }
 
 func main() {
